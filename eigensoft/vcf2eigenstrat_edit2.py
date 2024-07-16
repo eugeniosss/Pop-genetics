@@ -102,11 +102,14 @@ def main(options):
                     bits[2] = bits[0] + ":" + bits[1]
                 
                 # Mapping SNP identifier using correspondence
-                snp_id = correspondence_map.get(bits[0], bits[0])
+                snp_id_prefix = correspondence_map.get(bits[0], bits[0])
                 snp_location = bits[1]
-                snp_id = "{}:{}".format(snp_id, snp_location)  # Concatenate correspondence and SNP location
+                snp_id = "{}:{}".format(snp_id_prefix, snp_location)  # Concatenate correspondence and SNP location
 
                 snp.write("    ".join([snp_id, "1", "0.0", snp_location, bits[3], bits[4]]) + "\n")
+
+                # Update block map using the same snp_id
+                block_map[count] = snp_id
                 geno_string = ""
                 if options["ref"]:
                     geno_string = "2"
@@ -128,12 +131,9 @@ def main(options):
     # Writing block file
     if options["blockfile"]:
         block_file = open(options["blockfile"], "w")
-        for entry in block_map:
-            block_file.write("{}\t{}\n".format(entry, block_map[entry]))
+        for idx in sorted(block_map)[:-1]:
+            block_file.write("{}\t{}\n".format(block_map[idx],block_map[idx].split(":")[0]))
         block_file.close()
-        #for idx, (snp_id, _) in enumerate(sorted(block_map.items(), key=lambda x: int(x[0].split(":")[1]))):
-        #    block_file.write("{}\t{}\n".format(idx+1, block_map[snp_id]))
-        #block_file.close()
 
     return
 
