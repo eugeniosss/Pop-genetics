@@ -106,7 +106,7 @@ def main(options):
                 snp_location = bits[1]
                 snp_id = "{}:{}".format(snp_id_prefix, snp_location)  # Concatenate correspondence and SNP location
 
-                snp.write("    ".join([snp_id, "1", "0.0", snp_location, bits[3], bits[4]]) + "\n")
+                snp.write("    ".join([snp_id, snp_id_prefix, "0.0", snp_location, bits[3], bits[4]]) + "\n")
 
                 # Update block map using the same snp_id
                 block_map[count] = snp_id

@@ -7,10 +7,10 @@ def parse_options():
     """
     Options are described by the help() function
     """
-    options ={ "vcf":None, "out":"out", "ref":None, "indAsPop":False, "indmap":None, "correspondence": None, "blockfile": None }
+    options ={ "vcf":None, "out":"out", "ref":None, "indAsPop":False, "indmap":None, "correspondence": None }
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "v:o:r:i:c:b:", ["vcf", "out", "ref", "indmap", "indAsPop", "correspondence", "blockfile"])
+        opts, args = getopt.getopt(sys.argv[1:], "v:o:r:i:c:", ["vcf", "out", "ref", "indmap", "indAsPop", "correspondence"])
         print(opts, args)
     except Exception as err:
         print(str(err))
@@ -22,7 +22,6 @@ def parse_options():
         if o in ["-r","--ref"]:         options["ref"] = a
         if o in ["-i","--ind"]:         options["indmap"] = a
         if o in ["-c","--correspondence"]:   options["correspondence"] = a
-        if o in ["-b","--blockfile"]:   options["blockfile"] = a
         if o in ["--indAsPop"]:         options["indAsPop"] = True
         elif o in ["-o","--out"]:       options["out"] = a
 
@@ -69,9 +68,7 @@ def main(options):
             sex_map[bits[0]] = bits[1]
         ind_map_file.close()
     
-    block_map = {}
-    
-    for idx, line in enumerate(vcf):
+    for line in vcf:
         if line[:2] == "##":				  # Comment line
             next
         elif line[:6] == "#CHROM":			  # Header line
@@ -88,7 +85,7 @@ def main(options):
             else:
                 for indi in inds:
                     ind.write(indi+"\tU\tPOP\n")
-                
+                   
         else:							  # data
             bits = line.split()
             if "," in bits[4]:
@@ -102,14 +99,11 @@ def main(options):
                     bits[2] = bits[0] + ":" + bits[1]
                 
                 # Mapping SNP identifier using correspondence
-                snp_id_prefix = correspondence_map.get(bits[0], bits[0])
+                snp_id = correspondence_map.get(bits[0], bits[0])
                 snp_location = bits[1]
-                snp_id = "{}:{}".format(snp_id_prefix, snp_location)  # Concatenate correspondence and SNP location
+                snp_id = "{}:{}".format(snp_id, snp_location)  # Concatenate correspondence and SNP location
 
                 snp.write("    ".join([snp_id, "1", "0.0", snp_location, bits[3], bits[4]]) + "\n")
-
-                # Update block map using the same snp_id
-                block_map[count] = snp_id
                 geno_string = ""
                 if options["ref"]:
                     geno_string = "2"
@@ -117,9 +111,6 @@ def main(options):
                     geno_string += decode_gt_string(gt)
                 geno.write(geno_string + "\n")
                 count += 1
-                
-                # Update block map using correspondence values
-                block_map[count] = correspondence_map.get(bits[0], bits[0])
 
     [f.close() for f in [ind, snp, geno]]
 
@@ -127,14 +118,6 @@ def main(options):
     print("Excluded " + str(sum(removed.values())) + " sites")
     for key in removed:
         print("Excluded " + str(removed[key]) + " " + key)
-
-    # Writing block file
-    if options["blockfile"]:
-        block_file = open(options["blockfile"], "w")
-        for idx in sorted(block_map)[:-1]:
-            block_file.write("{}\t{}\n".format(block_map[idx],block_map[idx].split(":")[0]))
-        block_file.close()
-
     return
 
 
