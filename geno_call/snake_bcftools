@@ -1,0 +1,46 @@
+COORDS_FILE=""
+BAMS=""
+REF=""
+OUT=""
+POP_SCRIPTS=""
+
+DIC={}
+
+with open(COORDS_FILE, "r") as file:
+    for idx, line in enumerate(file, start=1):
+        values = line.strip().split()
+        DIC[idx] = values[0]+":"+values[1]+"-"+values[2]
+
+def get_region(entry):
+    return DIC[entry]
+
+rule all:
+    input:
+           OUT,
+
+rule geno_call_with_bcftools:
+    input:
+        reference=REF,
+    output:
+        "tmp/{ENTRY}.vcf"
+    log:
+        "tmp/{ENTRY}.log"
+    conda:
+        POP_SCRIPTS + "geno_callers_env.yml"
+    threads: 1
+    params:
+        region=lambda wildcards: DIC[int(wildcards.ENTRY)]
+    shell:
+        "(bcftools mpileup -f {input.reference} -b {BAMS} -r {params.region} | bcftools call -mv -Ov -o {output}) > {log} 2>&1"
+
+rule merge_all:
+    input:
+        ["tmp/{ENTRY}.vcf".format(ENTRY=ENTRY) for ENTRY in DIC.keys()]
+    threads: 1
+    output:
+        OUT,
+    params:
+        max_entry=len(DIC)  # Dynamically compute the maximum number of entries
+    run:
+        shell("grep CHR {input[0]} > {output}")
+        shell("for ((i = 1; i <= {params.max_entry}; ++i)); do awk '! /\#/' tmp/${{i}}.vcf >> {output} && rm tmp/${{i}}.vcf; done")
