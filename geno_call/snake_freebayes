@@ -1,28 +1,42 @@
-COORDS_FILE=""
+import math
+
+
+COORDS_FILE="
 BAMS=""
 REF=""
-OUT=""
+OUT_PREFIX=""
 POP_SCRIPTS=""
 
 DIC={}
+BATCH_SIZE = 500  # Number of VCFs per batch
 
 with open(COORDS_FILE, "r") as file:
     for idx, line in enumerate(file, start=1):
         values = line.strip().split()
         DIC[idx] = values[0]+":"+values[1]+"-"+values[2]
 
+# Calculate total number of batches
+TOTAL_BATCHES = math.ceil(len(DIC) / BATCH_SIZE)
+
+BATCHES = {
+    f"batch_{i + 1}": [
+        ENTRY for ENTRY in DIC.keys() if (ENTRY - 1) // BATCH_SIZE == i
+    ]
+    for i in range(TOTAL_BATCHES)
+}
+
 def get_region(entry):
     return DIC[entry]
 
 rule all:
     input:
-           OUT,
+           OUT_PREFIX+".vcf.gz.tbi",
 
 rule geno_call_with_freebayes:
     input:
         reference=REF,
     output:
-        "tmp/{ENTRY}.vcf"
+        temporary("tmp/{ENTRY}.vcf")
     log:
         "tmp/{ENTRY}.log"
     conda:
@@ -33,25 +47,59 @@ rule geno_call_with_freebayes:
     shell:
         "(freebayes \
         --fasta {input.reference} \
-        -H \
-        -J \
-        -g 1500 \
-        --genotype-qualities \
-        --min-alternate-total 3 \
-        --min-mapping-quality 30 \
-        --min-base-quality 30 \
-        --dont-left-align-indels \
         -L {BAMS} \
         -r {params.region} > {output}) > {log} 2>&1"
 
-rule merge_all:
+rule batch_merge:
     input:
-        ["tmp/{ENTRY}.vcf".format(ENTRY=ENTRY) for ENTRY in DIC.keys()]
-    threads: 1
+        lambda wildcards: expand("tmp/{ENTRY}.vcf", ENTRY=BATCHES[wildcards.batch])
     output:
-        OUT,
-    params:
-        max_entry=len(DIC)  # Dynamically compute the maximum number of entries
-    run:
-        shell("grep CHR {input[0]} > {output}")
-        shell("for ((i = 1; i <= {params.max_entry}; ++i)); do awk '! /\#/' tmp/${{i}}.vcf >> {output} && rm tmp/${{i}}.vcf; done")
+        temporary("tmp_batches/{batch}.vcf")
+    log:
+        "tmp_batches/{batch}.log"
+    threads: 1
+    shell:
+        """
+        bcftools concat -o {output} {input} > {log} 2>&1
+        """
+
+rule final_merge:
+    input:
+        expand("tmp_batches/{batch}.vcf", batch=BATCHES.keys())
+    output:
+       temporary( OUT_PREFIX+".vcf")
+    log:
+        "final_merge.log"
+    threads: 1
+    shell:
+        """
+        bcftools concat -o {output} {input} > {log} 2>&1
+        """
+
+rule zip_vcf:
+    input:
+        OUT_PREFIX+".vcf"
+    output:
+        OUT_PREFIX+".vcf.gz"
+    log:
+        "zip.log"
+    threads: 1
+    shell:
+        """
+        (bgzip -c {input} > {output}) > {log} 2>&1
+        """
+
+rule index_vcf_gz:
+    input:
+        OUT_PREFIX+".vcf.gz"
+    output:
+        OUT_PREFIX+".vcf.gz.tbi"
+    threads: 1
+    log:
+        "index.log"
+    conda:
+        POP_SCRIPTS + "geno_callers_env.yml"
+    shell:
+        """
+        tabix {input} > {log} 2>&1
+        """
