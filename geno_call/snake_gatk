@@ -1,12 +1,10 @@
 import os
-import math
 
 COORDS_FILE=""
 BAMS=""
 REF=""
 OUT_PREFIX=""
 POP_SCRIPTS=""
-GATK_DIR=""
 MEM_SINGLE_HAPLOCALLER="-Xmx4g"
 MEM_ALL="-Xmx16g"
 
@@ -16,30 +14,10 @@ with open(BAMS) as f:
         for line in f
     }
 
-DIC={}
-BATCH_SIZE = 500  # Number of VCFs per batch
-
-with open(COORDS_FILE, "r") as file:
-    for idx, line in enumerate(file, start=1):
-        values = line.strip().split()
-        DIC[idx] = values[0]+":"+values[1]+"-"+values[2]
-
-# Calculate total number of batches
-TOTAL_BATCHES = math.ceil(len(DIC) / BATCH_SIZE)
-
-BATCHES = {
-    f"batch_{i + 1}": [
-        ENTRY for ENTRY in DIC.keys() if (ENTRY - 1) // BATCH_SIZE == i
-    ]
-    for i in range(TOTAL_BATCHES)
-}
 
 def create_variant_string(input_list):
     # Prefix each entry in the list with '--variant' and join them into a single string
     return " ".join(f"--variant {item}" for item in input_list)
-
-def get_region(entry):
-    return DIC[entry]
 
 rule all:
     input:
@@ -50,45 +28,44 @@ rule geno_call_with_gatk:
     input:
         reference=REF,
         bam=lambda wildcards: bams_dict[wildcards.SAMPLE],
+        intervals=COORDS_FILE,
     output:
-        temporary("tmp/{SAMPLE}_{ENTRY}.gvcf")
+        temporary("tmp/{SAMPLE}.gvcf")
     log:
         "tmp/{SAMPLE}.log"
+    conda:
+        POP_SCRIPTS + "geno_callers_env.yml"
     params:
-        gatk=GATK_DIR,
-        mem=MEM_SINGLE_HAPLOCALLER,
-        region=lambda wildcards: DIC[int(wildcards.ENTRY)]
+        mem=MEM_SINGLE_HAPLOCALLER
     threads: 1
     shell:
         """
-        ({params.gatk} --java-options {params.mem} \
+        (gatk --java-options {params.mem} \
             HaplotypeCaller \
             -R {input.reference} \
-            --native-pair-hmm-threads {threads} \
             -I {input.bam} \
-            -L {params.region} \
+            -L {input.intervals} \
             -ERC GVCF \
             -O {output}) > {log} 2>&1
         """
 
-#        (gatk --java-options {params.mem} HaplotypeCaller \
-
 rule CombineGVCFs_with_gatk:
     input:
         reference=REF,
-        gvcfs = ["tmp/{SAMPLE}_{ENTRY}.gvcf".format(SAMPLE=SAMPLE) for SAMPLE in list(bams_dict.keys())]
+        gvcfs = ["tmp/{SAMPLE}.gvcf".format(SAMPLE=SAMPLE) for SAMPLE in list(bams_dict.keys())]
     output:
-        temporary("tmp/all_{ENTRY}.gvcf")
+        temporary("tmp/all.gvcf")
     log:
         "tmp/merging_GVCFs.log"
+    conda:
+        POP_SCRIPTS + "geno_callers_env.yml"
     params:
-        gatk=GATK_DIR,
-	    variants=create_variant_string(["tmp/{SAMPLE}.gvcf".format(SAMPLE=SAMPLE) for SAMPLE in bams_dict.keys()]),
+        variants=create_variant_string(["tmp/{SAMPLE}.gvcf".format(SAMPLE=SAMPLE) for SAMPLE in bams_dict.keys()]),
         mem=MEM_ALL
     threads: 1
     shell:
         """
-        ({params.gatk} --java-options {params.mem} \
+        (gatk --java-options {params.mem} \
             CombineGVCFs \
             -R {input.reference} \
             {params.variants} \
@@ -98,48 +75,23 @@ rule CombineGVCFs_with_gatk:
 rule GenotypeGVCFs_with_gatk:
     input:
         reference=REF,
-        gvcf="tmp/all_{ENTRY}.gvcf"
+        gvcf="tmp/all.gvcf"
     output:
-        temporary("tmp/all_{ENTRY}.vcf")
+        temporary(OUT_PREFIX+".vcf")
     log:
         "tmp/genotyping.log"
+    conda:
+        POP_SCRIPTS + "geno_callers_env.yml"
     threads: 1
     params:
-        gatk=GATK_DIR,
-	    mem=MEM_ALL
+        mem=MEM_ALL
     shell:
         """
-        ({params.gatk} --java-options {params.mem} \
+        (gatk --java-options {params.mem} \
             GenotypeGVCFs \
             -R {input.reference} \
             -V {input.gvcf}\
             -O {output}) > {log} 2>&1
-        """
-
-rule batch_merge:
-    input:
-        lambda wildcards: expand("all_tmp/{ENTRY}.vcf", ENTRY=BATCHES[wildcards.batch])
-    output:
-        temporary("tmp/{batch}.vcf")
-    log:
-        "tmp_batches/{batch}.log"
-    threads: 1
-    shell:
-        """
-        bcftools concat -o {output} {input} > {log} 2>&1
-        """
-
-rule final_merge:
-    input:
-        expand("tmp/{batch}.vcf", batch=BATCHES.keys())
-    output:
-       temporary( OUT_PREFIX+".vcf")
-    log:
-        "final_merge.log"
-    threads: 1
-    shell:
-        """
-        bcftools concat -o {output} {input} > {log} 2>&1
         """
 
 rule zip_vcf:
@@ -163,6 +115,8 @@ rule index_vcf_gz:
     threads: 1
     log:
         "index.log"
+    conda:
+        POP_SCRIPTS + "geno_callers_env.yml"
     shell:
         """
         tabix {input} > {log} 2>&1
