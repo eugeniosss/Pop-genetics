@@ -1,0 +1,127 @@
+INITIAL_BFILES_prefix="/data/cuckoo/rabbit/roman_zoo_Oxf/pseudo_haploid/LD"
+PED_TO_WORK_PREFIX="modified"
+CORRESPONDENCIES="list_correspondencies.txt"
+OUTPUT_PREFIX="smartpca"
+
+VCF_TO_BED_WITH_PLINK_PREFIX="first_plink"
+REMOVE_TRANS_PREFIX="no_trans"
+PSEUDO_HAPLOID_PREFIX="pseudo_haploid"
+LD_FILTER_PREFIX="LD"
+PLINK="/data/evolgen/software/plink/plink"
+POP_SCRIPTS="/data/evolgen/rabbit/australia_adaptation/local_bin/Pop-genetics/geno_call/"
+
+
+rule all:
+    input:
+        EVEC=OUTPUT_PREFIX+".evec",
+        EVAL=OUTPUT_PREFIX+".eval",
+
+rule cp:
+    input:
+        BED=INITIAL_BFILES_prefix+".bed",
+        BIM=INITIAL_BFILES_prefix+".bim",
+        FAM=INITIAL_BFILES_prefix+".fam",
+    output:
+        BED=PED_TO_WORK_PREFIX+".bed",
+        BIM=PED_TO_WORK_PREFIX+".bim",
+        FAM=PED_TO_WORK_PREFIX+".fam",
+    shell:
+        """
+        cp {input.BED} {output.BED}
+        cp {input.FAM} {output.FAM}
+        awk '{{ $1="1"; }} 1' < {input.BIM} > {output.BIM}
+        """
+
+rule prepare_parfile_convertf:
+    input:
+        BED=PED_TO_WORK_PREFIX+".bed",
+        BIM=PED_TO_WORK_PREFIX+".bim",
+        FAM=PED_TO_WORK_PREFIX+".fam",
+    output:
+        "bed_to_eigen.par",
+    params:
+        OUT_PREFIX=PED_TO_WORK_PREFIX
+    shell:
+        """
+        echo genotypename: {input.BED} > {output}
+        echo snpname: {input.BIM} >> {output}
+        echo indivname: {input.FAM} >> {output}
+        echo outputformat: EIGENSTRAT >> {output}
+        echo genotypeoutname: {params.OUT_PREFIX}.eigenstratgeno >> {output}
+        echo snpoutname: {params.OUT_PREFIX}.snp >> {output}
+        echo indivoutname: {params.OUT_PREFIX}.ind >> {output}
+        echo familynames: NO >> {output}
+        echo pordercheck: NO >> {output}
+        """
+
+rule run_convertf:
+    input:
+        "bed_to_eigen.par"
+    output:
+        EIGENSTRATGENO=PED_TO_WORK_PREFIX+".eigenstratgeno",
+        SNP=PED_TO_WORK_PREFIX+".snp",
+        IND=PED_TO_WORK_PREFIX+".ind",
+    conda:
+        POP_SCRIPTS+"eigensoft.yml"
+    log:
+        PED_TO_WORK_PREFIX+"_convertf.log"
+    shell:
+        "(convertf -p {input}) > {log} 2>&1"
+
+rule add_categories_to_ind_file:
+    input:
+        IND=PED_TO_WORK_PREFIX+".ind",
+        CORRESPONDENCIES=CORRESPONDENCIES,
+    output:
+        PED_TO_WORK_PREFIX+"_updated.ind",
+    shell:
+        """
+        
+        cp {input.IND} {output}
+
+        while IFS= read -r line || [[ -n "$line" ]]; do
+
+            sample=$(echo $line | cut -f 1 -d " ")
+
+            group=$(echo $line | cut -f 2 -d " ")
+
+            sed -i "/^[ ]*${{sample}}/s/???/${{group}}/g" {output}
+
+        done < {input.CORRESPONDENCIES}
+        """
+
+rule prepare_parfile_smartpca:
+    input:
+        EIGENSTRATGENO=PED_TO_WORK_PREFIX+".eigenstratgeno",
+        SNP=PED_TO_WORK_PREFIX+".snp",
+        IND=PED_TO_WORK_PREFIX+"_updated.ind",
+    output:
+        "smartpca.par"
+    params:
+        OUT_PREFIX=OUTPUT_PREFIX,
+    shell:
+        """
+            echo genotypename:      {input.EIGENSTRATGENO} > {output}
+            echo snpname:           {input.SNP} >> {output}
+            echo indivname:         {input.IND} >> {output}
+            echo evecoutname:       {params.OUT_PREFIX}.evec >> {output}
+            echo evaloutname:       {params.OUT_PREFIX}.eval >> {output}
+            echo poplistname:       times.txt >> {output}
+            echo outliermode: 2 >> {output}
+            echo lsqproject:         YES >> {output}
+
+            echo Modern > times.txt
+        """
+
+rule run_smartpca:
+    input:
+        "smartpca.par"
+    output:
+        EVEC=OUTPUT_PREFIX+".evec",
+        EVAL=OUTPUT_PREFIX+".eval",
+    conda:
+        POP_SCRIPTS+"eigensoft.yml"
+    log:
+        PED_TO_WORK_PREFIX+"_smartpca.log"
+    shell:
+        "(smartpca -p {input}) > {log} 2>&1"

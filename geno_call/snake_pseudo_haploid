@@ -1,0 +1,174 @@
+INITIAL_VCF="/data/cuckoo/rabbit/roman_zoo_Oxf/geno_call/freebayes_geno_call.vcf.gz"
+VCF_TO_BED_WITH_PLINK_PREFIX="first_plink"
+REMOVE_TRANS_PREFIX="no_trans"
+PSEUDO_HAPLOID_PREFIX="pseudo_haploid"
+LD_FILTER_PREFIX="LD"
+PLINK="/data/evolgen/software/plink/plink"
+POP_SCRIPTS="/data/evolgen/rabbit/australia_adaptation/local_bin/Pop-genetics/geno_call/"
+
+
+rule all:
+    input:
+        BED=LD_FILTER_PREFIX+".bed",
+        BIM=LD_FILTER_PREFIX+".bim",
+        FAM=LD_FILTER_PREFIX+".fam",
+        LOG=LD_FILTER_PREFIX+".log",
+        NOSEX=LD_FILTER_PREFIX+".nosex",
+
+rule vcf_to_bed_with_plink:
+    input:
+        INITIAL_VCF,
+    output:
+        BED=VCF_TO_BED_WITH_PLINK_PREFIX+".bed",
+        BIM=VCF_TO_BED_WITH_PLINK_PREFIX+".bim",
+        FAM=VCF_TO_BED_WITH_PLINK_PREFIX+".fam",
+        FRQ=VCF_TO_BED_WITH_PLINK_PREFIX+".frq",
+        LOG=VCF_TO_BED_WITH_PLINK_PREFIX+".log",
+        MAP=VCF_TO_BED_WITH_PLINK_PREFIX+".map",
+        NOSEX=VCF_TO_BED_WITH_PLINK_PREFIX+".nosex",
+        PED=VCF_TO_BED_WITH_PLINK_PREFIX+".ped",
+    log:
+        VCF_TO_BED_WITH_PLINK_PREFIX+".log"
+    threads: 1
+    params:
+        plink=PLINK,
+        prefix=VCF_TO_BED_WITH_PLINK_PREFIX,
+    shell:
+        "{params.plink} \
+            --vcf {input} \
+            --biallelic-only strict \
+            --snps-only \
+            --set-missing-var-ids @_# \
+            --make-bed \
+            --allow-extra-chr \
+            --double-id \
+            --freq \
+            --recode \
+            --out {params.prefix}"
+
+rule remove_trans:
+    input:
+        VCF_TO_BED_WITH_PLINK_PREFIX+".frq"
+    output:
+        REMOVE_TRANS_PREFIX+".snps"
+    script:
+        POP_SCRIPTS+"remove_trans.py"
+
+rule remove_trans_with_plink:
+    input:
+        BED=VCF_TO_BED_WITH_PLINK_PREFIX+".bed",
+        BIM=VCF_TO_BED_WITH_PLINK_PREFIX+".bim",
+        FAM=VCF_TO_BED_WITH_PLINK_PREFIX+".fam",
+        SNPS=REMOVE_TRANS_PREFIX+".snps"
+    output:
+        LOG=REMOVE_TRANS_PREFIX+"pre.log",
+        MAP=REMOVE_TRANS_PREFIX+"pre.map",
+        NOSEX=REMOVE_TRANS_PREFIX+"pre.nosex",
+        PED=REMOVE_TRANS_PREFIX+"pre.ped",
+    log:
+        REMOVE_TRANS_PREFIX+"pre.log"
+    params:
+        plink=PLINK,
+        input_prefix=VCF_TO_BED_WITH_PLINK_PREFIX,
+        output_prefix=REMOVE_TRANS_PREFIX+"pre",
+    shell:
+        "{params.plink} \
+            --bfile {params.input_prefix} \
+            --extract {input.SNPS} \
+            --allow-extra-chr \
+            --recode \
+            --out {params.output_prefix}"
+
+rule pseudo_haploid:
+    input:
+        REMOVE_TRANS_PREFIX+"pre.ped",
+    output:
+        REMOVE_TRANS_PREFIX+".tmp"
+    script:
+        POP_SCRIPTS+"pseudo_haploid_from_ped.py"
+
+rule overwrite_ped_pseudo_haploid:
+    input:
+        PED=REMOVE_TRANS_PREFIX+".tmp",
+        LOG=REMOVE_TRANS_PREFIX+"pre.log",
+        MAP=REMOVE_TRANS_PREFIX+"pre.map",
+        NOSEX=REMOVE_TRANS_PREFIX+"pre.nosex",
+    output:
+        PED=REMOVE_TRANS_PREFIX+"ped",
+        LOG=REMOVE_TRANS_PREFIX+"log",
+        MAP=REMOVE_TRANS_PREFIX+"map",
+        NOSEX=REMOVE_TRANS_PREFIX+"nosex",
+    shell:
+        """
+        mv {input.PED} {output.PED} 
+        mv {input.LOG} {output.LOG} 
+        mv {input.MAP} {output.MAP} 
+        mv {input.NOSEX} {output.NOSEX} 
+        """
+
+rule pseudo_haploid_with_plink:
+    input:
+        PED=REMOVE_TRANS_PREFIX+"ped",
+        LOG=REMOVE_TRANS_PREFIX+"log",
+        MAP=REMOVE_TRANS_PREFIX+"map",
+        NOSEX=REMOVE_TRANS_PREFIX+"nosex",
+    output:
+        BED=PSEUDO_HAPLOID_PREFIX+".bed",
+        BIM=PSEUDO_HAPLOID_PREFIX+".bim",
+        FAM=PSEUDO_HAPLOID_PREFIX+".fam",
+        LOG=PSEUDO_HAPLOID_PREFIX+".log",
+        NOSEX=PSEUDO_HAPLOID_PREFIX+".nosex",
+    params:
+        plink=PLINK,
+        input_prefix=VCF_TO_BED_WITH_PLINK_PREFIX,
+        output_prefix=PSEUDO_HAPLOID_PREFIX,
+    shell:
+        "{params.plink} \
+        --file {params.input_prefix} \
+        --allow-extra-chr \
+        --maf 0.05 \
+        --make-bed \
+        --out {params.output_prefix}"
+
+rule LD_filter_list:
+    input:
+        BED=PSEUDO_HAPLOID_PREFIX+".bed",
+        BIM=PSEUDO_HAPLOID_PREFIX+".bim",
+        FAM=PSEUDO_HAPLOID_PREFIX+".fam",
+    output:
+        IN=LD_FILTER_PREFIX+".prune.in",
+        OUT=LD_FILTER_PREFIX+".prune.out",
+    params:
+        plink=PLINK,
+        input_prefix=PSEUDO_HAPLOID_PREFIX,
+        output_prefix=LD_FILTER_PREFIX,
+    shell:
+        "{params.plink} \
+        --bfile {params.input_prefix} \
+        --indep-pairwise 200 25 0.6 \
+        --allow-extra-chr \
+        --out {params.output_prefix}"
+
+rule LD_filter_with_plink:
+    input:
+        BED=PSEUDO_HAPLOID_PREFIX+".bed",
+        BIM=PSEUDO_HAPLOID_PREFIX+".bim",
+        FAM=PSEUDO_HAPLOID_PREFIX+".fam",
+        IN=LD_FILTER_PREFIX+".prune.in",
+    output:
+        BED=LD_FILTER_PREFIX+".bed",
+        BIM=LD_FILTER_PREFIX+".bim",
+        FAM=LD_FILTER_PREFIX+".fam",
+        LOG=LD_FILTER_PREFIX+".log",
+        NOSEX=LD_FILTER_PREFIX+".nosex",
+    params:
+        plink=PLINK,
+        input_prefix=PSEUDO_HAPLOID_PREFIX,
+        output_prefix=LD_FILTER_PREFIX,
+    shell:
+        "{params.plink} \
+        --bfile {params.input_prefix} \
+        --extract {input.IN} \
+        --make-bed \
+        --allow-extra-chr \
+        --out {params.output_prefix}"
