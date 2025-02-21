@@ -18,3 +18,11 @@ for rule_file in rule_files:
 rule all:
     input:
         expand("{software}/variants.vcf.gz.tbi", software=config['softwares'].split(" "))  # Get chr list dynamically
+
+onsuccess:
+    endTime = datetime.now()
+    print(f"Workflow completed successfully! It took {endTime - startTime}.")
+
+onerror:
+    endTime = datetime.now()
+    print(f"Workflow failed! It ran for {endTime - startTime} before failing.")
