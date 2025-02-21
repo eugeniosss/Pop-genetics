@@ -1,6 +1,13 @@
 def get_chromosomes_from_bed(bed_file):
+    seen = set()
+    chromosomes = []
     with open(bed_file) as f:
-        return sorted(set(line.split()[0] for line in f if line.strip()))
+        for line in f:
+            chrom = line.split()[0]
+            if chrom not in seen and chrom.strip():
+                chromosomes.append(chrom)
+                seen.add(chrom)
+    return chromosomes
 
 # Use this function to extract chromosomes
 chromosomes = get_chromosomes_from_bed(config["target_list"])
@@ -9,8 +16,9 @@ rule merge:
     input:
         # Dynamically create a list of VCF files for each chromosome (from the rule's outputs)
         expand("{{software}}/{chr}_variants.vcf", chr=chromosomes)  # Or use a list of chromosomes dynamically
+        #lambda wildcards: [f"{{software}}/{chrom}_variants.vcf" for chrom in chromosomes]
     output:
-        "{software}/variants.vcf"  # Output merged VCF file
+        temp("{software}/variants.vcf")  # Output merged VCF file
     log:
         "{software}/final_merge.log"
     conda:
@@ -19,4 +27,6 @@ rule merge:
     shell:
         """
         bcftools concat -o {output} {input} > {log} 2>&1
+        echo {input} >> {log}
+
         """

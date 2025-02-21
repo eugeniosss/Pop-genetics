@@ -25,16 +25,21 @@ rule haplo_caller_with_gatk:
         bam=lambda wildcards: bams_dict[wildcards.SAMPLE],
         bed_file="split_bed/{chr}.bed"   # Per-chromosome BED file
     output:
-        "gatk/{chr}_{SAMPLE}_variants.gvcf"   # Output VCF per chromosome
+        gvcf=temp("gatk/{chr}_{SAMPLE}_variants.gvcf"),
+        idx=temp("gatk/{chr}_{SAMPLE}_variants.gvcf.idx")
     log:
         "gatk/{chr}_{SAMPLE}.log"
     threads: 1
     conda:
         config["dir"] + "envs/gatk.yml"
+    params:
+        options=config["options"]["gatk_HaplotypeCaller"],
+        mem_mb=int((config["options"]["gatk_HaplotypeCaller"]).split("--java-options -Xmx")[1].split("m")[0])*1.2
     wildcard_constraints:
         chr="|".join(chromosomes)  # Restrains 'chr' to values from the file
     shell:
         """
+        mkdir -p gatk
         (gatk \
             HaplotypeCaller \
             -R {input.reference} \
@@ -42,20 +47,23 @@ rule haplo_caller_with_gatk:
             -I {input.bam} \
             -L {input.bed_file} \
             -ERC GVCF \
-            -O {output}) > {log} 2>&1
+            {params.options} \
+            -O {output.gvcf}) > {log} 2>&1
         """
 
 rule CombineGVCFs_with_gatk:
     input:
         reference=config["ref_genome"],
-#        gvcfs = ["gatk/{{chr}}_{SAMPLE}_variants.gvcf".format(SAMPLE=SAMPLE) for SAMPLE in list(bams_dict.keys())]
-        gvcfs = expand("gatk/{{chr}}_{SAMPLE}_variants.gvcf", SAMPLE=list(bams_dict.keys()))  # Or use a list of chromosomes dynamically
+        gvcfs = expand("gatk/{{chr}}_{SAMPLE}_variants.gvcf", SAMPLE=list(bams_dict.keys())),  # Or use a list of chromosomes dynamically
     output:
-        "gatk/{chr}_variants.gvcf"
+        gvcf=temp("gatk/{chr}_variants.gvcf"),
+        idx=temp("gatk/{chr}_variants.gvcf.idx")
     log:
         "gatk/{chr}_merging_GVCFs.log"
     params:
         variants=create_variant_string(expand("gatk/{{chr}}_{SAMPLE}_variants.gvcf", SAMPLE=list(bams_dict.keys()))),
+        options=config["options"]["gatk_CombineGVCFs"],
+        mem_mb=int((config["options"]["gatk_CombineGVCFs"]).split("--java-options -Xmx")[1].split("m")[0])*1.2
     threads: 1
     conda:
         config["dir"] + "envs/gatk.yml"
@@ -67,7 +75,8 @@ rule CombineGVCFs_with_gatk:
             CombineGVCFs \
             -R {input.reference} \
             {params.variants} \
-            -O {output}) > {log} 2>&1
+            {params.options} \
+            -O {output.gvcf}) > {log} 2>&1
         """
 
 rule GenotypeGVCFs_with_gatk:
@@ -75,17 +84,24 @@ rule GenotypeGVCFs_with_gatk:
         reference=config["ref_genome"],
         gvcf="gatk/{chr}_variants.gvcf"
     output:
-        "gatk/{chr}_variants.vcf"
+        vcf=temp("gatk/{chr}_variants.vcf"),
+        idx=temp("gatk/{chr}_variants.vcf.idx")
     log:
         "gatk/{chr}_genotyping.log"
     threads: 1
     conda:
         config["dir"] + "envs/gatk.yml"
+    params:
+        options=config["options"]["gatk_GenotypeGVCFs"],
+        mem_mb=int((config["options"]["gatk_GenotypeGVCFs"]).split("--java-options -Xmx")[1].split("m")[0])*1.2
+    wildcard_constraints:
+        chr="|".join(chromosomes)  # Restrains 'chr' to values from the file
     shell:
         """
         (gatk \
             GenotypeGVCFs \
             -R {input.reference} \
             -V {input.gvcf}\
-            -O {output}) > {log} 2>&1
+            {params.options} \
+            -O {output.vcf}) > {log} 2>&1
         """

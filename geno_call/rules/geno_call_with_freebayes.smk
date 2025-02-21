@@ -4,7 +4,7 @@ rule geno_call_with_freebayes:
         reference=config["ref_genome"],  # Reference genome
         bed_file="split_bed/{chr}.bed"   # Per-chromosome BED file
     output:
-        "freebayes/{chr}_variants.vcf"   # Output VCF per chromosome
+        temp("freebayes/{chr}_variants.vcf")   # Output VCF per chromosome
     log:
         "freebayes/{chr}.log"
     conda:
@@ -12,11 +12,13 @@ rule geno_call_with_freebayes:
     threads: 1
     params:
         bams=config["bams"],  # BAM file list (define in config or Snakefile)
+        options=config["options"]["freebayes"]
     shell:
         """
         mkdir -p freebayes
-        freebayes \
-        --fasta {input.reference} \
-        -L {params.bams} \
-        -t {input.bed_file} > {output} 2> {log}
+        (freebayes \
+            --fasta {input.reference} \
+            -L {params.bams} \
+            {params.options} \
+            -t {input.bed_file} > {output}) > {log} 2>&1
         """
