@@ -1,0 +1,10 @@
+
+target_list: /data/cuckoo/rabbit/balearics/geno_call/20250220/IRN10000035363_Ocun_31Oct2019_primary_targets_clean_full_chrs_sub.bed
+
+dir: /data/evolgen/rabbit/australia_adaptation/local_bin/Pop-genetics/geno_call/
+
+ref_genome: /data/evolgen/rabbit/ref_genome/Oryctolagus_cuniculus.OryCun2.0.dna.toplevel.fa
+
+bams: bams.txt
+
+softwares: freebayes graphtyper bcftools gatk

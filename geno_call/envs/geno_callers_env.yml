@@ -1,9 +1,12 @@
 name: geno_callers
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
   - freebayes=1.3.8
+  - htslib=1.21
+  - bcftools=1.21
+  - vcflib=1.0.10
   - bcftools=1.21
   - graphtyper=2.7.7
