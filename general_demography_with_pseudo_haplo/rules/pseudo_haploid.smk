@@ -1,8 +1,8 @@
 rule randomize_haplotypes:
     input:
-        config["subsets"]+"_no_trans.ped",
+        "plink/"+config["subsets"]+"_no_trans.ped",
     output:
-        config["subsets"]+"tmp.txt",
+        temp("plink/"+config["subsets"]+"tmp.txt"),
     run:
         import csv
         import random
@@ -25,15 +25,15 @@ rule randomize_haplotypes:
 
 rule overwrite_ped_pseudo_haploid:
     input:
-        PED=config["subsets"]+"tmp.txt",
-        MAP=config["subsets"]+"_no_trans.map",
-        NOSEX=config["subsets"]+"_no_trans.nosex",
-        LOG=config["subsets"]+"_no_trans.log"
+        PED="plink/"+config["subsets"]+"tmp.txt",
+        MAP="plink/"+config["subsets"]+"_no_trans.map",
+        NOSEX="plink/"+config["subsets"]+"_no_trans.nosex",
+        LOG="plink/"+config["subsets"]+"_no_trans.log"
     output:
-        PED=config["subsets"]+"_no_trans_mod.ped",
-        MAP=config["subsets"]+"_no_trans_mod.map",
-        NOSEX=config["subsets"]+"_no_trans_mod.nosex",
-        LOG=config["subsets"]+"_no_trans_mod.log"
+        PED=temp("plink/"+config["subsets"]+"_no_trans_mod.ped"),
+        MAP=temp("plink/"+config["subsets"]+"_no_trans_mod.map"),
+        NOSEX=temp("plink/"+config["subsets"]+"_no_trans_mod.nosex"),
+        LOG="plink/"+config["subsets"]+"_no_trans_mod.log"
     shell:
         """
         mv {input.PED} {output.PED} 
@@ -44,22 +44,22 @@ rule overwrite_ped_pseudo_haploid:
 
 rule pseudo_haploid_with_plink:
     input:
-        PED=config["subsets"]+"_no_trans_mod.ped",
-        MAP=config["subsets"]+"_no_trans_mod.log",
-        NOSEX=config["subsets"]+"_no_trans_mod.log",
-        LOG=config["subsets"]+"_no_trans_mod.log"
+        PED="plink/"+config["subsets"]+"_no_trans_mod.ped",
+        MAP="plink/"+config["subsets"]+"_no_trans_mod.map",
+        NOSEX="plink/"+config["subsets"]+"_no_trans_mod.nosex",
+        LOG="plink/"+config["subsets"]+"_no_trans_mod.log"
     output:
-        BED=config["subsets"]+"_no_trans_pseudo.bed",
-        BIM=config["subsets"]+"_no_trans_pseudo.bim",
-        FAM=config["subsets"]+"_no_trans_pseudo.fam",
-        NOSEX=config["subsets"]+"_no_trans_pseudo.nosex",
+        BED=temp("plink/"+config["subsets"]+"_no_trans_pseudo.bed"),
+        BIM=temp("plink/"+config["subsets"]+"_no_trans_pseudo.bim"),
+        FAM=temp("plink/"+config["subsets"]+"_no_trans_pseudo.fam"),
+        NOSEX=temp("plink/"+config["subsets"]+"_no_trans_pseudo.nosex"),
     params:
-        input_prefix=config["subsets"]+"_no_trans_mod",
-        output_prefix=config["subsets"]+"_no_trans_pseudo",
+        input_prefix="plink/"+config["subsets"]+"_no_trans_mod",
+        output_prefix="plink/"+config["subsets"]+"_no_trans_pseudo",
     conda:
         config["dir"] + "envs/plink.yml"
     log:
-        config["subsets"]+"_no_trans_pseudo_snake.log",
+        "plink/"+config["subsets"]+"_no_trans_pseudo_snake.log",
     shell:
         "(plink \
         --file {params.input_prefix} \

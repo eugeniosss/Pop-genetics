@@ -1,0 +1,6 @@
+
+dir: /media/jbod2/eugenio/Pop-genetics/general_demography_with_pseudo_haplo/
+
+initial_vcf: sub.vcf
+
+subsets: "list"

@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+import glob
+from datetime import datetime
+import pandas as pd
+import os
+startTime = datetime.now()
+
+# Loading the config file
+configfile: "config.yaml"
+
+rule_files = glob.glob(f"{config['dir']}/rules/*.smk")
+
+# Loop through rule files and include them
+for rule_file in rule_files:
+    include: rule_file
+
+rule all:
+    input:
+        #expand("{software}/variants.vcf.gz.tbi", software=config['softwares'].split(" "))  # Get chr list dynamically
+        EVEC="proje_pca/"+config["subsets"]+".evec",
+        EVAL="proje_pca/"+config["subsets"]+".eval",
+
+onsuccess:
+    endTime = datetime.now()
+    print(f"Workflow completed successfully! It took {endTime - startTime}.")
+
+onerror:
+    endTime = datetime.now()
+    print(f"Workflow failed! It ran for {endTime - startTime} before failing.")

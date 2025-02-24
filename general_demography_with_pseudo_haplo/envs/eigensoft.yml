@@ -1,0 +1,7 @@
+name: geno_callers
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - eigensoft=8.0.0

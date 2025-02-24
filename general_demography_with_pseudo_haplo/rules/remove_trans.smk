@@ -1,8 +1,8 @@
 rule remove_trans:
     input:
-        FRQ=config["subsets"]+".frq",
+        FRQ="plink/"+config["subsets"]+".frq",
     output:
-        FRQ=config["subsets"]+".snps",
+        FRQ=temp("plink/"+config["subsets"]+".snps"),
     run:
         import csv
 
@@ -21,22 +21,22 @@ rule remove_trans:
 
 rule remove_trans_with_plink:
     input:
-        BED=config["subsets"]+".bed",
-        BIM=config["subsets"]+".bim",
-        FAM=config["subsets"]+".fam",
-        SNPS=config["subsets"]+".snps",
+        BED="plink/"+config["subsets"]+".bed",
+        BIM="plink/"+config["subsets"]+".bim",
+        FAM="plink/"+config["subsets"]+".fam",
+        SNPS="plink/"+config["subsets"]+".snps",
     output:
-        MAP=config["subsets"]+"_no_trans.map",
-        NOSEX=config["subsets"]+"_no_trans.nosex",
-        PED=config["subsets"]+"_no_trans.ped",
-        LOG=config["subsets"]+"_no_trans.log"
+        MAP=temp("plink/"+config["subsets"]+"_no_trans.map"),
+        NOSEX=temp("plink/"+config["subsets"]+"_no_trans.nosex"),
+        PED=temp("plink/"+config["subsets"]+"_no_trans.ped"),
+        LOG="plink/"+config["subsets"]+"_no_trans.log"
     log:
-        config["subsets"]+"_no_trans_snake.log"
+        "plink/"+config["subsets"]+"_no_trans_snake.log"
     conda:
         config["dir"] + "envs/plink.yml"
     params:
-        input_prefix=config["subsets"],
-        output_prefix=config["subsets"]+"_no_trans",
+        input_prefix="plink/"+config["subsets"],
+        output_prefix="plink/"+config["subsets"]+"_no_trans",
     shell:
         "(plink \
             --bfile {params.input_prefix} \
