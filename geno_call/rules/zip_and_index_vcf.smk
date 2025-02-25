@@ -1,10 +1,10 @@
 rule zip_vcf:
     input:
-        "{software}/variants.vcf"  # Input from final_merge rule
+        "{software}_{dataset}/variants.vcf"  # Input from final_merge rule
     output:
-        "{software}/variants.vcf.gz"  # Output gzipped VCF file
+        "{software}_{dataset}/variants.vcf.gz"  # Output gzipped VCF file
     log:
-        "{software}/zip_vcf.log"
+        "{software}_{dataset}/zip_vcf.log"
     threads: 1
     shell:
         """
@@ -13,12 +13,12 @@ rule zip_vcf:
 
 rule index_vcf_gz:
     input:
-        "{software}/variants.vcf.gz"  # Input gzipped VCF file
+        "{software}_{dataset}/variants.vcf.gz"  # Input gzipped VCF file
     output:
-        "{software}/variants.vcf.gz.tbi"  # Output index file
+        "{software}_{dataset}/variants.vcf.gz.tbi"  # Output index file
     threads: 1
     log:
-        "{software}/index_vcf.log"
+        "{software}_{dataset}/index_vcf.log"
     shell:
         """
         tabix -p vcf {input} > {log} 2>&1

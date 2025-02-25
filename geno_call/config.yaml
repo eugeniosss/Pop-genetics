@@ -1,18 +1,22 @@
 
-target_list: IRN10000035363_Ocun_31Oct2019_primary_targets_clean_full_chrs.bed
+target_list: IRN10000035363_Ocun_31Oct2019_primary_targets_clean_full_chrs_sub.bed
 
 dir: /data/evolgen/rabbit/australia_adaptation/local_bin/Pop-genetics/geno_call/
 
 ref_genome: /data/evolgen/rabbit/ref_genome/Oryctolagus_cuniculus.OryCun2.0.dna.toplevel.fa
 
-bams: bams.txt
+datasets: teste1 teste2
 
-softwares: gatk freebayes graphtyper bcftools
+softwares: bcftools gatk freebayes graphtyper
 
 options:
   freebayes: ""
   graphtyper: ""
-  bcftools: ""
+  bcftools: "-a DP -Ou" #IMPORTANT FOR CALCULATE STATS FOR bcftools
   gatk_HaplotypeCaller: " --java-options -Xmx4000m"
   gatk_CombineGVCFs: " --java-options -Xmx16000m"
   gatk_GenotypeGVCFs: "--java-options -Xmx16000m"
+  sub_sample_vcf_for_stats: "1"
+
+comparissons: all
+

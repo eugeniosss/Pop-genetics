@@ -10,3 +10,4 @@ dependencies:
   - vcflib=1.0.10
   - bcftools=1.21
   - graphtyper=2.7.7
+  - bedtools=2.31.1

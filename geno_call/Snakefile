@@ -15,9 +15,35 @@ rule_files = glob.glob(f"{config['dir']}/rules/*.smk")
 for rule_file in rule_files:
     include: rule_file
 
-rule all:
-    input:
-        expand("{software}/variants.vcf.gz.tbi", software=config['softwares'].split(" "))  # Get chr list dynamically
+if config['comparissons']=="None":
+    rule all:
+        input:
+            expand("{software}_{dataset}/variants.vcf.gz.tbi", software=config['softwares'].split(" "), dataset=config['datasets'].split(" ")),  # Get chr list dynamically
+            expand("{software}_{dataset}/stats/{software}_{dataset}_stats_summarized.pdf", software=config['softwares'].split(" "), dataset=config['datasets'].split(" "))
+
+elif config['comparissons']=="softwares":
+    rule all:
+        input:
+            expand("{software}_{dataset}/variants.vcf.gz.tbi", software=config['softwares'].split(" "), dataset=config['datasets'].split(" ")),  # Get chr list dynamically
+            expand("{software}_{dataset}/stats/{software}_{dataset}_stats_summarized.pdf", software=config['softwares'].split(" "), dataset=config['datasets'].split(" ")),
+            expand("{dataset}_stats_summarized_different_softwares.pdf", dataset=config['datasets'].split(" ")),
+
+elif config['comparissons']=="datasets":
+    rule all:
+        input:
+            expand("{software}_{dataset}/variants.vcf.gz.tbi", software=config['softwares'].split(" "), dataset=config['datasets'].split(" ")),  # Get chr list dynamically
+            expand("{software}_{dataset}/stats/{software}_{dataset}_stats_summarized.pdf", software=config['softwares'].split(" "), dataset=config['datasets'].split(" ")),
+            expand("{software}_stats_summarized_different_datasets.pdf", software=config['softwares'].split(" ")),
+
+elif config['comparissons']=="all":
+    rule all:
+        input:
+            expand("{software}_{dataset}/variants.vcf.gz.tbi", software=config['softwares'].split(" "), dataset=config['datasets'].split(" ")),  # Get chr list dynamically
+            expand("{software}_{dataset}/stats/{software}_{dataset}_stats_summarized.pdf", software=config['softwares'].split(" "), dataset=config['datasets'].split(" ")),
+            expand("{dataset}_stats_summarized_different_softwares.pdf", dataset=config['datasets'].split(" ")),
+            expand("{software}_stats_summarized_different_datasets.pdf", software=config['softwares'].split(" ")),
+
+
 
 onsuccess:
     endTime = datetime.now()

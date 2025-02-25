@@ -10,11 +10,16 @@ def create_bams_dict(bams_file):
         }
     return bams_dict
 
+def get_bams_dict(wildcards):
+    return create_bams_dict(f"{wildcards.dataset}.txt")
+
 def get_chromosomes_from_bed(bed_file):
     with open(bed_file) as f:
         return sorted(set(line.split()[0] for line in f if line.strip()))
 
-bams_dict=create_bams_dict(config["bams"])
+#bams_dict=create_bams_dict(config["bams"])
+#bams_dict = lambda wildcards: create_bams_dict(f"{wildcards.dataset}.txt")
+bams_dict = lambda wildcards: create_bams_dict(f"{wildcards.dataset}.txt")
 
 chromosomes = get_chromosomes_from_bed(config["target_list"])
 
@@ -22,13 +27,13 @@ chromosomes = get_chromosomes_from_bed(config["target_list"])
 rule haplo_caller_with_gatk:
     input:
         reference=config["ref_genome"],
-        bam=lambda wildcards: bams_dict[wildcards.SAMPLE],
+        bam=lambda wildcards: bams_dict(wildcards)[wildcards.SAMPLE],
         bed_file="split_bed/{chr}.bed"   # Per-chromosome BED file
     output:
-        gvcf=temp("gatk/{chr}_{SAMPLE}_variants.gvcf"),
-        idx=temp("gatk/{chr}_{SAMPLE}_variants.gvcf.idx")
+        gvcf=temp("gatk_{dataset}/{chr}_{SAMPLE}_variants.gvcf"),
+        idx=temp("gatk_{dataset}/{chr}_{SAMPLE}_variants.gvcf.idx")
     log:
-        "gatk/{chr}_{SAMPLE}.log"
+        "gatk_{dataset}/{chr}_{SAMPLE}.log"
     threads: 1
     conda:
         config["dir"] + "envs/gatk.yml"
@@ -54,14 +59,20 @@ rule haplo_caller_with_gatk:
 rule CombineGVCFs_with_gatk:
     input:
         reference=config["ref_genome"],
-        gvcfs = expand("gatk/{{chr}}_{SAMPLE}_variants.gvcf", SAMPLE=list(bams_dict.keys())),  # Or use a list of chromosomes dynamically
+        gvcfs=lambda wildcards: expand("gatk_{dataset}/{chr}_{SAMPLE}_variants.gvcf", 
+            dataset=wildcards.dataset, 
+            chr=wildcards.chr,
+            SAMPLE=list(get_bams_dict(wildcards).keys()))
     output:
-        gvcf=temp("gatk/{chr}_variants.gvcf"),
-        idx=temp("gatk/{chr}_variants.gvcf.idx")
+        gvcf=temp("gatk_{dataset}/{chr}_variants.gvcf"),
+        idx=temp("gatk_{dataset}/{chr}_variants.gvcf.idx")
     log:
-        "gatk/{chr}_merging_GVCFs.log"
+        "gatk_{dataset}/{chr}_merging_GVCFs.log"
     params:
-        variants=create_variant_string(expand("gatk/{{chr}}_{SAMPLE}_variants.gvcf", SAMPLE=list(bams_dict.keys()))),
+        variants=lambda wildcards: create_variant_string(expand("gatk_{dataset}/{chr}_{SAMPLE}_variants.gvcf", 
+           dataset=wildcards.dataset, 
+           chr=wildcards.chr, 
+           SAMPLE=list(get_bams_dict(wildcards).keys()))),
         options=config["options"]["gatk_CombineGVCFs"],
         mem_mb=int((config["options"]["gatk_CombineGVCFs"]).split("--java-options -Xmx")[1].split("m")[0])*1.2
     threads: 1
@@ -82,12 +93,12 @@ rule CombineGVCFs_with_gatk:
 rule GenotypeGVCFs_with_gatk:
     input:
         reference=config["ref_genome"],
-        gvcf="gatk/{chr}_variants.gvcf"
+        gvcf="gatk_{dataset}/{chr}_variants.gvcf"
     output:
-        vcf=temp("gatk/{chr}_variants.vcf"),
-        idx=temp("gatk/{chr}_variants.vcf.idx")
+        vcf=temp("gatk_{dataset}/{chr}_variants.vcf"),
+        idx=temp("gatk_{dataset}/{chr}_variants.vcf.idx")
     log:
-        "gatk/{chr}_genotyping.log"
+        "gatk_{dataset}/{chr}_genotyping.log"
     threads: 1
     conda:
         config["dir"] + "envs/gatk.yml"

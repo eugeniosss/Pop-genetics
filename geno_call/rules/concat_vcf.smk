@@ -15,12 +15,12 @@ chromosomes = get_chromosomes_from_bed(config["target_list"])
 rule merge:
     input:
         # Dynamically create a list of VCF files for each chromosome (from the rule's outputs)
-        expand("{{software}}/{chr}_variants.vcf", chr=chromosomes)  # Or use a list of chromosomes dynamically
+        expand("{{software}}_{{dataset}}/{chr}_variants.vcf", chr=chromosomes)  # Or use a list of chromosomes dynamically
         #lambda wildcards: [f"{{software}}/{chrom}_variants.vcf" for chrom in chromosomes]
     output:
-        temp("{software}/variants.vcf")  # Output merged VCF file
+        temp("{software}_{dataset}/variants.vcf")  # Output merged VCF file
     log:
-        "{software}/final_merge.log"
+        "{software}_{dataset}/final_merge.log"
     conda:
         config["dir"] + "envs/geno_callers_env.yml"
     threads: 1
