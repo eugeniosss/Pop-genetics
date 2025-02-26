@@ -44,7 +44,6 @@ rule haplo_caller_with_gatk:
         chr="|".join(chromosomes)  # Restrains 'chr' to values from the file
     shell:
         """
-        mkdir -p gatk
         (gatk \
             HaplotypeCaller \
             -R {input.reference} \

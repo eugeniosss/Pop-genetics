@@ -5,8 +5,9 @@ rule parse:
         target=config["target_list"],
     output:
         temp("split_bed/{chr}.bed")
+    log:
+        "split_bed/{chr}.log"
     shell:
         """
-        mkdir -p split_bed
-        awk '$1 == "{wildcards.chr}"' {input.target} > {output}
+        (awk '$1 == "{wildcards.chr}"' {input.target} > {output}) > {log} 2>&1
         """

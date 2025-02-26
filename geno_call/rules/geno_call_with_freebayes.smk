@@ -15,7 +15,6 @@ rule geno_call_with_freebayes:
         options=config["options"]["freebayes"]
     shell:
         """
-        mkdir -p freebayes
         (freebayes \
             --fasta {input.reference} \
             -L {params.bams} \

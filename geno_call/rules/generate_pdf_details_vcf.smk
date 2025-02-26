@@ -1,11 +1,11 @@
 
 rule sub_sample_vcf:
 	input:
-		vcf="{software}_{dataset}/variants.vcf.gz",
-		tbi="{software}_{dataset}/variants.vcf.gz.tbi"
+		vcf="{software}_{dataset}/variants_{software}_{dataset}.vcf.gz",
+		tbi="{software}_{dataset}/variants_{software}_{dataset}.vcf.gz.tbi"
 	output:
-		vcf="{software}_{dataset}/variants_sub.vcf.gz",
-		tbi="{software}_{dataset}/variants_sub.vcf.gz.tbi"
+		vcf=temp("{software}_{dataset}/variants_sub.vcf.gz"),
+		tbi=temp("{software}_{dataset}/variants_sub.vcf.gz.tbi")
 	conda:
 		config["dir"] + "envs/geno_callers_env.yml"
 	threads: 1
@@ -23,12 +23,12 @@ rule calculate_stats_vcf:
 	input:
 		"{software}_{dataset}/variants_sub.vcf.gz",
 	output:
-		lqual="{software}_{dataset}/stats/site_quality.lqual",
-		ldepth_mean="{software}_{dataset}/stats/mean_depth_per_site.ldepth.mean",
-		lmiss="{software}_{dataset}/stats/missing_data_per_site.lmiss",
-		frq="{software}_{dataset}/stats/allele_freq2.frq",
-		idepth="{software}_{dataset}/stats/mean_depth_per_individual.idepth",
-		imiss="{software}_{dataset}/stats/missing_data_per_indv.imiss"
+		lqual=temp("{software}_{dataset}/stats/site_quality.lqual"),
+		ldepth_mean=temp("{software}_{dataset}/stats/mean_depth_per_site.ldepth.mean"),
+		lmiss=temp("{software}_{dataset}/stats/missing_data_per_site.lmiss"),
+		frq=temp("{software}_{dataset}/stats/allele_freq2.frq"),
+		idepth=temp("{software}_{dataset}/stats/mean_depth_per_individual.idepth"),
+		imiss=temp("{software}_{dataset}/stats/missing_data_per_indv.imiss")
 	threads: 1
 	params:
 		output_folder="{software}_{dataset}/stats"
@@ -80,10 +80,10 @@ rule create_ind_plot:
 
 rule create_bed_files_for_positions_matrix:
 	input:
-		vcf="{software}_{dataset}/variants.vcf.gz",
-		tbi="{software}_{dataset}/variants.vcf.gz.tbi"
+		vcf="{software}_{dataset}/variants_{software}_{dataset}.vcf.gz",
+		tbi="{software}_{dataset}/variants_{software}_{dataset}.vcf.gz.tbi"
 	output:
-		"{software}_{dataset}/variants.bed"
+		temp("{software}_{dataset}/variants.bed")
 	conda:
 		config["dir"] + "envs/geno_callers_env.yml"
 	log:
@@ -98,9 +98,9 @@ rule create_positions_matrix_per_dataset:
 	input:
 		beds=expand("{software}_{{dataset}}/variants.bed", software=config['softwares'].split(" ")),
 	output:
-		"{dataset}_positions_matrix_soft.txt"
+		temp("{dataset}_positions_matrix_soft.txt")
 	log:
-		"{dataset}_creating_intersect_matrix.log"
+		"R_plotting/{dataset}_creating_intersect_matrix.log"
 	shell:
 		"""
 		#!/usr/bin/bash
@@ -125,7 +125,7 @@ rule create_multi_plot_per_dataset:
 		input_dir=",".join(expand("{software}_{{dataset}}/stats/", software=config['softwares'].split(" "))),
 		script=config["dir"]+"rules/summarize_multiple_stats_vcf_per_dataset.R"
 	log:
-		"{dataset}_R_plotting.log"
+		"R_plotting/{dataset}_R_plotting.log"
 	shell:
 		"""
 		(Rscript {params.script} -f {params.input_dir} -m {input.intersects} -o {output}) > {log} 2>&1
@@ -135,9 +135,9 @@ rule create_positions_matrix_per_software:
 	input:
 		beds=expand("{{software}}_{dataset}/variants.bed", dataset=config['datasets'].split(" ")),
 	output:
-		"{software}_positions_matrix_data.txt"
+		temp("{software}_positions_matrix_data.txt")
 	log:
-		"{software}_creating_intersect_matrix.log"
+		"R_plotting/{software}_creating_intersect_matrix.log"
 	shell:
 		"""
 		#!/usr/bin/bash
@@ -162,7 +162,7 @@ rule create_multi_plot_per_software:
 		input_dir=",".join(expand("{{software}}_{dataset}/stats/", dataset=config['datasets'].split(" "))),
 		script=config["dir"]+"rules/summarize_multiple_stats_vcf_per_software.R"
 	log:
-		"{software}_R_plotting.log"
+		"R_plotting/{software}_R_plotting.log"
 	shell:
 		"""
 		(Rscript {params.script} -f {params.input_dir} -m {input.intersects} -o {output}) > {log} 2>&1

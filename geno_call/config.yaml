@@ -1,22 +1,27 @@
 
-target_list: IRN10000035363_Ocun_31Oct2019_primary_targets_clean_full_chrs_sub.bed
+target_list: $bed_path
 
-dir: /data/evolgen/rabbit/australia_adaptation/local_bin/Pop-genetics/geno_call/
+dir: $path_to_local_github_dir
 
-ref_genome: /data/evolgen/rabbit/ref_genome/Oryctolagus_cuniculus.OryCun2.0.dna.toplevel.fa
+ref_genome: $ref_genome
 
-datasets: teste1 teste2
+datasets: $dataset1 $dataset2
+
+#${dataset}.txt in dir, with list of bams
 
 softwares: bcftools gatk freebayes graphtyper
 
+#bcftools or gatk or freebayes or graphtyper
+
 options:
-  freebayes: ""
-  graphtyper: ""
-  bcftools: "-a DP -Ou" #IMPORTANT FOR CALCULATE STATS FOR bcftools
-  gatk_HaplotypeCaller: " --java-options -Xmx4000m"
+  freebayes: "--min-mapping-quality 30 --min-base-quality 30"
+  graphtyper: "--force_no_copy_reference"
+  bcftools: "-a DP -Ou --min-MQ 30 --min-BQ 30" #-a DP -Ou IMPERATIVE FOR CALCULATE STATS FOR bcftools
+  gatk_HaplotypeCaller: " --java-options -Xmx4000m --minimum-mapping-quality 30 --min-base-quality-score 30"
   gatk_CombineGVCFs: " --java-options -Xmx16000m"
   gatk_GenotypeGVCFs: "--java-options -Xmx16000m"
   sub_sample_vcf_for_stats: "1"
 
 comparissons: all
 
+#None or datasets or softwares or all

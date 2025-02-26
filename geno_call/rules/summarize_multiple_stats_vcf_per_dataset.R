@@ -209,7 +209,7 @@ ggplot(snps_df_cleaned, aes(x = Software, y = Total_SNPs, fill = Software)) +
   labs(title = "Total Variants per Software", x = "Software", y = "Total Variants") +
   theme(axis.text.x = element_blank())
 
-ggVennDiagram(snp_sets) + 
+ggVennDiagram(snp_sets, label_alpha=0) + 
   theme_minimal() +
   ggtitle("Variants Overlap Across Software Methods") +
   theme(axis.text.x = element_blank(),

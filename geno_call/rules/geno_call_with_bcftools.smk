@@ -15,7 +15,6 @@ rule geno_call_with_bcftools:
         options=config["options"]["bcftools"]
     shell:
         """
-        mkdir -p bcftools 
         (bcftools mpileup \
             -f {input.reference} \
             -b {params.bams} \

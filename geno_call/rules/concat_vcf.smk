@@ -18,7 +18,7 @@ rule merge:
         expand("{{software}}_{{dataset}}/{chr}_variants.vcf", chr=chromosomes)  # Or use a list of chromosomes dynamically
         #lambda wildcards: [f"{{software}}/{chrom}_variants.vcf" for chrom in chromosomes]
     output:
-        temp("{software}_{dataset}/variants.vcf")  # Output merged VCF file
+        temp("{software}_{dataset}/variants_{software}_{dataset}.vcf")  # Output merged VCF file
     log:
         "{software}_{dataset}/final_merge.log"
     conda:
@@ -28,5 +28,4 @@ rule merge:
         """
         bcftools concat -o {output} {input} > {log} 2>&1
         echo {input} >> {log}
-
         """

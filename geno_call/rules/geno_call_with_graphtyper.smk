@@ -2,7 +2,7 @@ rule prepare_bed_file_for_graphtyper:
     input:
         "split_bed/{chr}.bed"   # Per-chromosome BED file
     output:
-        "split_bed_graph/{chr}.bed"
+        temp("split_bed_graph/{chr}.bed")
     log:
         "split_bed_graph/{chr}.log"
     shell:
@@ -25,9 +25,7 @@ rule geno_call_with_graphtyper:
         bams=lambda wildcards: f"{wildcards.dataset}.txt",  # Ensure dataset is a wildcard
         options=config["options"]["graphtyper"]
     shell:
-        """
-        mkdir -p graphtyper
-        
+        """    
         (graphtyper genotype \
             {input.reference} \
             --sams={params.bams} \
