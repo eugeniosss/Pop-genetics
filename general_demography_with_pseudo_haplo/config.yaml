@@ -1,6 +1,10 @@
 
 dir: /media/jbod2/eugenio/Pop-genetics/general_demography_with_pseudo_haplo/
 
-initial_vcf: sub.vcf
+initial_vcf: /media/jbod4/eugenio_silva/balearic_hares/pop_gen/20250221/make_vcf/geno_call.vcf.gz
 
-subsets: "list"
+subsets: all eur grana_vs_eur grana_vs_tim OnlyModern
+
+admix:
+  Kmin: 1
+  Kmax: 6

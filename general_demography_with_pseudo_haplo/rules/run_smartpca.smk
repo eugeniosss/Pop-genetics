@@ -3,9 +3,9 @@
 
 rule modify_BIM_all_to_1:
     input:
-        BIM="plink/"+config["subsets"]+"_no_trans_pseudo_LD.bim",
+        BIM="plink_{subset}/{subset}_no_trans_pseudo_LD.bim",
     output:
-        BIM="proje_pca/"+config["subsets"]+"_all_1.bim",
+        BIM="ProjePca_{subset}/{subset}_all_1.bim",
     shell:
         """
         awk '{{ $1="1"; }} 1' < {input.BIM} > {output.BIM}
@@ -13,13 +13,13 @@ rule modify_BIM_all_to_1:
 
 rule prepare_parfile_convertf:
     input:
-        BED="plink/"+config["subsets"]+"_no_trans_pseudo_LD.bed",
-        BIM="proje_pca/"+config["subsets"]+"_all_1.bim",
-        FAM="plink/"+config["subsets"]+"_no_trans_pseudo_LD.fam",
+        BED="plink_{subset}/{subset}_no_trans_pseudo_LD.bed",
+        BIM="ProjePca_{subset}/{subset}_all_1.bim",
+        FAM="plink_{subset}/{subset}_no_trans_pseudo_LD.fam",
     output:
-        "proje_pca/"+config["subsets"]+"_bed_to_eigen.par",
+        "ProjePca_{subset}/{subset}_bed_to_eigen.par",
     params:
-        OUT_PREFIX="proje_pca/"+config["subsets"]
+        OUT_PREFIX="ProjePca_{subset}/{subset}"
     shell:
         """
         echo genotypename: {input.BED} > {output}
@@ -35,24 +35,24 @@ rule prepare_parfile_convertf:
 
 rule run_convertf:
     input:
-        "proje_pca/"+config["subsets"]+"_bed_to_eigen.par",
+        "ProjePca_{subset}/{subset}_bed_to_eigen.par",
     output:
-        EIGENSTRATGENO="proje_pca/"+config["subsets"]+".eigenstratgeno",
-        SNP="proje_pca/"+config["subsets"]+".snp",
-        IND="proje_pca/"+config["subsets"]+".ind",
+        EIGENSTRATGENO="ProjePca_{subset}/{subset}.eigenstratgeno",
+        SNP="ProjePca_{subset}/{subset}.snp",
+        IND="ProjePca_{subset}/{subset}.ind",
     conda:
         config["dir"] + "envs/eigensoft.yml"
     log:
-        "proje_pca/"+config["subsets"]+"_convertf.log"
+        "ProjePca_{subset}/{subset}_convertf.log"
     shell:
         "(convertf -p {input}) > {log} 2>&1"
 
 rule add_categories_to_ind_file:
     input:
-        IND="proje_pca/"+config["subsets"]+".ind",
-        CORRESPONDENCIES=config["subsets"]+".txt",
+        IND="ProjePca_{subset}/{subset}.ind",
+        CORRESPONDENCIES="{subset}.txt",
     output:
-        "proje_pca/"+config["subsets"]+"_updated.ind",
+        "ProjePca_{subset}/{subset}_updated.ind",
     shell:
         """       
         cp {input.IND} {output}
@@ -70,13 +70,13 @@ rule add_categories_to_ind_file:
 
 rule prepare_parfile_smartpca:
     input:
-        EIGENSTRATGENO="proje_pca/"+config["subsets"]+".eigenstratgeno",
-        SNP="proje_pca/"+config["subsets"]+".snp",
-        IND="proje_pca/"+config["subsets"]+"_updated.ind",
+        EIGENSTRATGENO="ProjePca_{subset}/{subset}.eigenstratgeno",
+        SNP="ProjePca_{subset}/{subset}.snp",
+        IND="ProjePca_{subset}/{subset}_updated.ind",
     output:
-        "proje_pca/"+config["subsets"]+"_smartpca.par",
+        "ProjePca_{subset}/{subset}_smartpca.par",
     params:
-        OUT_PREFIX="proje_pca/"+config["subsets"],
+        OUT_PREFIX="ProjePca_{subset}/{subset}",
     shell:
         """
             echo genotypename:      {input.EIGENSTRATGENO} > {output}
@@ -93,13 +93,13 @@ rule prepare_parfile_smartpca:
 
 rule run_smartpca:
     input:
-        "proje_pca/"+config["subsets"]+"_smartpca.par",
+        "ProjePca_{subset}/{subset}_smartpca.par",
     output:
-        EVEC="proje_pca/"+config["subsets"]+".evec",
-        EVAL="proje_pca/"+config["subsets"]+".eval",
+        EVEC="ProjePca_{subset}/{subset}.evec",
+        EVAL="ProjePca_{subset}/{subset}.eval",
     conda:
         config["dir"] + "envs/eigensoft.yml"
     log:
-        "proje_pca/"+config["subsets"]+"_smartpca.log"
+        "ProjePca_{subset}/{subset}_smartpca.log"
     shell:
         "(smartpca -p {input}) > {log} 2>&1"

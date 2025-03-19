@@ -1,31 +1,31 @@
 
 rule create_keep_file:
     input:
-         config["subsets"]+".txt"
+         "{subset}.txt"
     output:
-         temp(config["subsets"]+"_mod.txt")
+         temp("{subset}_mod.txt")
     shell:
          "awk '{{print $1,$1,0,0,0,-9}}' {input} > {output}"
 
 rule vcf_to_bed_with_plink:
     input:
         VCF=config["initial_vcf"],
-        KEEP=config["subsets"]+"_mod.txt"
+        KEEP="{subset}_mod.txt"
     output:
-        BED=temp("plink/"+config["subsets"]+".bed"),
-        BIM=temp("plink/"+config["subsets"]+".bim"),
-        FAM=temp("plink/"+config["subsets"]+".fam"),
-        FRQ=temp("plink/"+config["subsets"]+".frq"),
-        MAP=temp("plink/"+config["subsets"]+".map"),
-        NOSEX=temp("plink/"+config["subsets"]+".nosex"),
-        PED=temp("plink/"+config["subsets"]+".ped"),
+        BED=temp("plink_{subset}/{subset}.bed"),
+        BIM=temp("plink_{subset}/{subset}.bim"),
+        FAM=temp("plink_{subset}/{subset}.fam"),
+        FRQ=temp("plink_{subset}/{subset}.frq"),
+        MAP=temp("plink_{subset}/{subset}.map"),
+        NOSEX=temp("plink_{subset}/{subset}.nosex"),
+        PED=temp("plink_{subset}/{subset}.ped"),
     log:
-        "plink/"+config["subsets"]+"snake.log"
+        "plink_{subset}/{subset}_snake.log"
     threads: 1
     conda:
         config["dir"] + "envs/plink.yml"
     params:
-        prefix="plink/"+config["subsets"],
+        prefix="plink_{subset}/{subset}",
     shell:
         "(plink \
             --vcf {input.VCF} \

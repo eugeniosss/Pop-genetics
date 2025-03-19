@@ -1,18 +1,18 @@
 rule LD_filter_list:
     input:
-        BED="plink/"+config["subsets"]+"_no_trans_pseudo.bed",
-        BIM="plink/"+config["subsets"]+"_no_trans_pseudo.bim",
-        FAM="plink/"+config["subsets"]+"_no_trans_pseudo.fam",
+        BED="plink_{subset}/{subset}_no_trans_pseudo.bed",
+        BIM="plink_{subset}/{subset}_no_trans_pseudo.bim",
+        FAM="plink_{subset}/{subset}_no_trans_pseudo.fam",
     output:
-        IN=temp("plink/"+config["subsets"]+"_no_trans_pseudo.prune.in"),
-        OUT=temp("plink/"+config["subsets"]+"_no_trans_pseudo.prune.out"),
+        IN=temp("plink_{subset}/{subset}_no_trans_pseudo.prune.in"),
+        OUT=temp("plink_{subset}/{subset}_no_trans_pseudo.prune.out"),
     conda:
         config["dir"] + "envs/plink.yml"
     params:
-        input_prefix="plink/"+config["subsets"]+"_no_trans_pseudo",
-        output_prefix="plink/"+config["subsets"]+"_no_trans_pseudo",
+        input_prefix="plink_{subset}/{subset}_no_trans_pseudo",
+        output_prefix="plink_{subset}/{subset}_no_trans_pseudo",
     log:
-        "plink/"+config["subsets"]+"_no_trans_pseudo_LD_snake.log"
+        "plink_{subset}/{subset}_no_trans_pseudo_LD_snake.log"
     shell:
         "(plink \
         --bfile {params.input_prefix} \
@@ -22,22 +22,22 @@ rule LD_filter_list:
 
 rule LD_filter_with_plink:
     input:
-        BED="plink/"+config["subsets"]+"_no_trans_pseudo.bed",
-        BIM="plink/"+config["subsets"]+"_no_trans_pseudo.bim",
-        FAM="plink/"+config["subsets"]+"_no_trans_pseudo.fam",
-        IN="plink/"+config["subsets"]+"_no_trans_pseudo.prune.in",
+        BED="plink_{subset}/{subset}_no_trans_pseudo.bed",
+        BIM="plink_{subset}/{subset}_no_trans_pseudo.bim",
+        FAM="plink_{subset}/{subset}_no_trans_pseudo.fam",
+        IN="plink_{subset}/{subset}_no_trans_pseudo.prune.in",
     output:
-        BED="plink/"+config["subsets"]+"_no_trans_pseudo_LD.bed",
-        BIM="plink/"+config["subsets"]+"_no_trans_pseudo_LD.bim",
-        FAM="plink/"+config["subsets"]+"_no_trans_pseudo_LD.fam",
-        NOSEX="plink/"+config["subsets"]+"_no_trans_pseudo_LD.nosex",
+        BED="plink_{subset}/{subset}_no_trans_pseudo_LD.bed",
+        BIM="plink_{subset}/{subset}_no_trans_pseudo_LD.bim",
+        FAM="plink_{subset}/{subset}_no_trans_pseudo_LD.fam",
+        NOSEX="plink_{subset}/{subset}_no_trans_pseudo_LD.nosex",
     conda:
         config["dir"] + "envs/plink.yml"
     params:
-        input_prefix="plink/"+config["subsets"]+"_no_trans_pseudo",
-        output_prefix="plink/"+config["subsets"]+"_no_trans_pseudo_LD",
+        input_prefix="plink_{subset}/{subset}_no_trans_pseudo",
+        output_prefix="plink_{subset}/{subset}_no_trans_pseudo_LD",
     log:
-        "plink/"+config["subsets"]+"_no_trans_pseudo_LD_snake.log"
+        "plink_{subset}/{subset}_no_trans_pseudo_LD_snake_filter.log"
     shell:
         "(plink \
         --bfile {params.input_prefix} \

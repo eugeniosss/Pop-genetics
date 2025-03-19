@@ -18,8 +18,10 @@ for rule_file in rule_files:
 rule all:
     input:
         #expand("{software}/variants.vcf.gz.tbi", software=config['softwares'].split(" "))  # Get chr list dynamically
-        EVEC="proje_pca/"+config["subsets"]+".evec",
-        EVAL="proje_pca/"+config["subsets"]+".eval",
+        EVEC=expand("ProjePca_{subset}/{subset}.evec", subset=config['subsets'].split(" ")),
+        EVAL=expand("ProjePca_{subset}/{subset}.eval", subset=config['subsets'].split(" ")),
+        P=expand("admixture_{subset}/{subset}.{K}.P", subset=config['subsets'].split(" "), K=range(config['admix']['Kmin'],config['admix']['Kmax']+1))
+        #expand("plink_{subset}/{subset}.bed", subset=config['subsets'].split(" "))
 
 onsuccess:
     endTime = datetime.now()
